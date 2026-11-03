@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌴 YaraSpeak
 
-## Getting Started
+An AI-powered spoken English coach for the host of **Yara Retreat**, Hiriketiya, Sri Lanka.
 
-First, run the development server:
+Practise real guest conversations out loud with **David**, a polite British tourist played by Google Gemini. You speak into the microphone, David speaks back in a British voice, and after every turn the YaraSpeak coach gives one short, gentle tip.
+
+## Stack
+
+| Piece | Choice |
+| --- | --- |
+| Framework | Next.js 14 (App Router) + TypeScript |
+| Styling | Tailwind CSS |
+| Icons | lucide-react |
+| AI | Google Gemini via `generativelanguage.googleapis.com` (server-side `fetch`, no SDK) |
+| Speech → text | Browser Web Speech API (`webkitSpeechRecognition`), `en-GB` |
+| Text → speech | Browser `window.speechSynthesis`, British voice preferred |
+
+The API key never reaches the browser: the key is only read inside `app/api/chat/route.ts`, which runs on the server.
+
+## Features
+
+- Pulsating mic button with four states: idle, listening, thinking, speaking.
+- Live transcript preview while you speak.
+- Automatic playback of David's reply, with a mute toggle.
+- **Hands free** mode: the mic reopens by itself after David stops talking, like a phone call.
+- Fallback text input for devices without speech recognition.
+- Four practice scenarios plus free chat, each with an opening line from David:
+  - 🏨 Check-in & Welcome Drink (King Coconut)
+  - 🛵 Scooter Rental & Hiriketiya Beach / Surfing
+  - 🍳 Breakfast & Wi-Fi Details
+  - 🚕 Check-out & Airport Taxi
+- 💡 **YaraSpeak Coach Tip** card under each of David's replies.
+
+## Local setup
 
 ```bash
+npm install
+cp .env.example .env.local   # then paste your real key into .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 and allow microphone access.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Get a free key at https://aistudio.google.com/app/apikey.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+GEMINI_API_KEY=AIza...
+# GEMINI_MODEL=gemini-1.5-flash   # optional override
+```
 
-## Learn More
+If the app reports `Google AI returned 404`, your key cannot use the default
+`gemini-1.5-flash` alias — set `GEMINI_MODEL=gemini-2.5-flash` in `.env.local`
+and restart the dev server.
 
-To learn more about Next.js, take a look at the following resources:
+## Deploy to Vercel
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+git add -A
+git commit -m "YaraSpeak"
+gh repo create yaraspeak --private --source=. --push
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Then on vercel.com: **Add New → Project → import the repo**, add the
+`GEMINI_API_KEY` environment variable (Production, Preview and Development),
+and deploy. Voice input needs HTTPS, which every Vercel URL already provides.
 
-## Deploy on Vercel
+## Browser notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Speech recognition is a Chrome/Edge/Safari feature. On Firefox the mic button is
+disabled and the typing box is shown instead. Available TTS voices come from the
+operating system, so David sounds different on Android, iOS, Windows and macOS.

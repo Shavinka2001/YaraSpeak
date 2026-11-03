@@ -3,25 +3,133 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --emerald: #064e3b;
+  --emerald-soft: #0f6b52;
+  --sand: #fdfbf7;
+  --stone: #e7e2d8;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--sand);
+  color: var(--emerald);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Thin, sandy scrollbar for the chat feed */
+.yara-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.yara-scroll::-webkit-scrollbar-thumb {
+  background: #d9d2c4;
+  border-radius: 9999px;
+}
+.yara-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+/* --- Mic button states --- */
+
+@keyframes yara-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  70% {
+    transform: scale(1.75);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.75);
+    opacity: 0;
+  }
+}
+
+.yara-ring {
+  animation: yara-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.yara-ring-delayed {
+  animation-delay: 0.6s;
+}
+
+@keyframes yara-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 10px 30px -10px rgba(6, 78, 59, 0.6);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 18px 44px -12px rgba(6, 78, 59, 0.75);
+  }
+}
+
+.yara-breathe {
+  animation: yara-breathe 2.2s ease-in-out infinite;
+}
+
+/* Speaking equaliser bars */
+@keyframes yara-bar {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.yara-bar {
+  animation: yara-bar 0.9s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes yara-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.yara-rise {
+  animation: yara-rise 0.28s ease-out both;
+}
+
+@keyframes yara-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+.yara-dot {
+  animation: yara-dot 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yara-ring,
+  .yara-breathe,
+  .yara-bar,
+  .yara-rise,
+  .yara-dot {
+    animation: none !important;
   }
 }
