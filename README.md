@@ -88,3 +88,4 @@ and deploy. Voice input needs HTTPS, which every Vercel URL already provides.
 Speech recognition is a Chrome/Edge/Safari feature. On Firefox the mic button is
 disabled and the typing box is shown instead. Available TTS voices come from the
 operating system, so David sounds different on Android, iOS, Windows and macOS.
+# YaraSpeak
