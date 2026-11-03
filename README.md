@@ -11,7 +11,7 @@ Practise real guest conversations out loud with **David**, a polite British tour
 | Framework | Next.js 14 (App Router) + TypeScript |
 | Styling | Tailwind CSS |
 | Icons | lucide-react |
-| AI | Google Gemini via `generativelanguage.googleapis.com` (server-side `fetch`, no SDK) |
+| AI | Google Gemini Flash via `generativelanguage.googleapis.com` (server-side `fetch`, no SDK) |
 | Speech → text | Browser Web Speech API (`webkitSpeechRecognition`), `en-GB` |
 | Text → speech | Browser `window.speechSynthesis`, British voice preferred |
 
@@ -45,12 +45,31 @@ Get a free key at https://aistudio.google.com/app/apikey.
 
 ```
 GEMINI_API_KEY=AIza...
-# GEMINI_MODEL=gemini-1.5-flash   # optional override
+# GEMINI_MODEL=gemini-3.8-flash   # optional override
 ```
 
-If the app reports `Google AI returned 404`, your key cannot use the default
-`gemini-1.5-flash` alias — set `GEMINI_MODEL=gemini-2.5-flash` in `.env.local`
-and restart the dev server.
+### A note on the model
+
+The default is `gemini-3.5-flash`. Gemini 1.5 Flash and 2.5 Flash are both
+retired for new API keys ("no longer available to new users"), so asking for
+them returns a 404.
+
+Gemini 3.x models reason before answering, and those hidden thinking tokens
+come out of `maxOutputTokens` — unconstrained they eat the whole budget and the
+JSON reply arrives truncated. The route therefore sends
+`thinkingConfig: { thinkingLevel: "low" }` for any `gemini-3*` model, which
+David does not need anyway for two friendly sentences. The field is skipped for
+other models, since older ones reject it.
+
+If you see `Google AI returned 404`, set `GEMINI_MODEL` to a model your key can
+use and restart. To list them:
+
+```bash
+curl -s "https://generativelanguage.googleapis.com/v1beta/models"   -H "x-goog-api-key: $GEMINI_API_KEY"
+```
+
+Flash models sometimes answer 503 under load; the route retries once
+automatically.
 
 ## Deploy to Vercel
 

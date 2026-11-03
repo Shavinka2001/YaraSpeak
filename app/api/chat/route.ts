@@ -7,7 +7,16 @@ export const dynamic = "force-dynamic";
  * The model id is read from the environment so it can be swapped without a
  * code change (Google retires older model aliases from time to time).
  */
-const MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+
+/**
+ * Gemini 3.x models reason before answering by default, and those hidden
+ * thinking tokens are drawn from maxOutputTokens: left alone they eat the
+ * whole budget and the JSON comes back truncated. David only needs two
+ * friendly sentences, so thinking is turned down to the lowest level.
+ * The field is 3.x-only, so it is omitted for any other model.
+ */
+const supportsThinkingLevel = (model: string) => model.startsWith("gemini-3");
 const ENDPOINT = (model: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
@@ -98,6 +107,21 @@ function parseModelJson(
       // try the next candidate
     }
   }
+
+  // Truncated JSON (e.g. the model hit the token ceiling): recover the reply
+  // text by hand so David never reads raw JSON out loud.
+  const replyMatch = cleaned.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)/);
+  if (replyMatch?.[1]) {
+    const reply = replyMatch[1].replace(/\\n/g, " ").replace(/\\"/g, '"').trim();
+    const feedbackMatch = cleaned.match(/"feedback"\s*:\s*"((?:[^"\\]|\\.)*)/);
+    if (reply) {
+      return {
+        reply,
+        feedback: feedbackMatch?.[1]?.replace(/\\"/g, '"').trim() ?? "",
+      };
+    }
+  }
+
   return null;
 }
 
@@ -150,7 +174,10 @@ export async function POST(request: Request) {
     generationConfig: {
       temperature: 0.85,
       topP: 0.95,
-      maxOutputTokens: 400,
+      maxOutputTokens: 800,
+      ...(supportsThinkingLevel(MODEL)
+        ? { thinkingConfig: { thinkingLevel: "low" } }
+        : {}),
       responseMimeType: "application/json",
       responseSchema: {
         type: "object",
@@ -175,9 +202,8 @@ export async function POST(request: Request) {
     ],
   };
 
-  let response: Response;
-  try {
-    response = await fetch(ENDPOINT(MODEL), {
+  const callGemini = () =>
+    fetch(ENDPOINT(MODEL), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -186,6 +212,15 @@ export async function POST(request: Request) {
       body: JSON.stringify(payload),
       cache: "no-store",
     });
+
+  let response: Response;
+  try {
+    response = await callGemini();
+    // The free flash tiers return 503 under load; one quick retry usually lands.
+    if (response.status === 503) {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      response = await callGemini();
+    }
   } catch {
     return NextResponse.json(
       { error: "Could not reach Google AI. Check your internet connection." },
@@ -202,12 +237,14 @@ export async function POST(request: Request) {
     );
     const hint =
       response.status === 404
-        ? ` The model "${MODEL}" is not available for this API key. Set GEMINI_MODEL to a model you can access, for example gemini-2.5-flash.`
+        ? ` The model "${MODEL}" is not available for this API key. Set GEMINI_MODEL to a model you can access, for example gemini-3.5-flash.`
         : response.status === 429
           ? " The free quota is used up for now. Wait a minute and try again."
-          : response.status === 400 || response.status === 403
-            ? " Check that GEMINI_API_KEY is a valid Google AI Studio key."
-            : "";
+          : response.status === 503
+            ? " Google AI is busy at the moment. Please try again in a few seconds."
+            : response.status === 400 || response.status === 403
+              ? " Check that GEMINI_API_KEY is a valid Google AI Studio key."
+              : "";
     return NextResponse.json(
       { error: `Google AI returned ${response.status}.${hint}` },
       { status: 502 },
